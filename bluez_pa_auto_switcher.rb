@@ -32,11 +32,36 @@ def count_indent(str)
   str.chars.count { |char| char == "\t" }
 end
 
+def set_a2dp
+  card = get_blues_card()
+
+  if card != nil
+    if not system("pactl set-card-profile #{card["Name"]} a2dp_sink")
+      raise "Cannot set card profile. Non zero exit code!"
+    end
+
+    sinks = get_sink_input_info()    
+    muted_music_sinks = sinks.find_all { |s| s[1]["Mute"] == "yes" && ["music", "video"].include?(s[1]["Properties"]["media.role"]) }
+
+    muted_music_sinks.each do |s|
+      len = "Sink Input #".length
+      input_sink_number = s[0][len, s.length]
+      system("pactl set-sink-input-mute #{input_sink_number} false")
+      puts "Sink music/video input '#{s[1]["Properties"]["application.name"]}' restored"
+    end
+
+  else
+    puts "Bluetooth sink not found!"
+    sleep 1
+    return
+  end
+end  
+
 def switch
   card = get_blues_card()
 
   if card != nil
-    if not system("pactl set-card-profile #{card["Name"]} headset_head_unit")
+    if not system("pactl set-card-profile #{card["Name"]} handsfree_head_unit")
       raise "Cannot set card profile. Non zero exit code!"
     end
   else
@@ -45,18 +70,23 @@ def switch
     return
   end
 
+  #last_state_corked = nil
   while true
     sinks = get_sink_input_info()
-    sink = sinks.find { |s| @config["validClients"].include?(s[1]["Properties"]["application.name"]) } 
+    sink = sinks.find { |s| @config["validClients"].include?(s[1]["Properties"]["application.name"]) }    
     if sink == nil
       puts "Sink use finished! Switching back..."
       break
+    elsif sink[1]["Corked"] == "yes" #!last_state_corked.nil? && sink[1]["Corked"] != last_state_corked
+      puts "Sink output (microphone) use finished! Switching back..."
+      break
     end
+    #last_state_corked = sink[1]["Corked"]
     puts "Sink in use: #{sink[1]["Properties"]["application.name"]}"
     sleep 1
   end
 
-  system("pactl set-card-profile #{card["Name"]} a2dp_sink")
+  set_a2dp()
 end
 
 def parse_tabbed_info(lines)
@@ -163,6 +193,8 @@ def load_config
 end
 
 @config = load_config()
+
+set_a2dp()
 
 while true
   begin

@@ -1,9 +1,11 @@
 validClients:
-  - Chromium
-  - Firefox
+#  - Firefox
   - Chromium
   - Skype
   - ZOOM VoiceEngine
-  - WEBRTC VoiceEngine
-  - Google Chrome
+#  - WEBRTC VoiceEngine
+#  - Google Chrome
+  - Vivaldi
   - Microsoft Teams - Preview
+  - Signal
+#  - spotify
